@@ -1,4 +1,7 @@
-use super::Error;
+use crate::{
+    util::{validate_not_empty, validate_same_length},
+    Error,
+};
 use std::iter::zip;
 
 /// Calculates the mean squared error between two vectors.
@@ -12,14 +15,11 @@ use std::iter::zip;
 /// * `y` - Vector of actual values
 /// * `y_hat` - Vector of predicted values
 pub fn mean_squared_error(y: &Vec<f64>, y_hat: &Vec<f64>) -> Result<f64, Error> {
-    if y.is_empty() && y_hat.is_empty() {
-        return Err(Error::EmptyVector);
-    }
+    validate_not_empty(y)?;
+    validate_not_empty(y_hat)?;
+    validate_same_length(y, y_hat)?;
 
-    match y.len().cmp(&y_hat.len()) {
-        std::cmp::Ordering::Equal => Ok(_mean_squared_error(y, y_hat)),
-        _ => Err(Error::DimensionMismatch), // not equal
-    }
+    Ok(_mean_squared_error(y, y_hat))
 }
 
 fn _mean_squared_error(y: &Vec<f64>, y_hat: &Vec<f64>) -> f64 {
