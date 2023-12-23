@@ -1,21 +1,16 @@
+use super::Error;
 use std::iter::zip;
 
-#[derive(Debug, PartialEq)]
-pub enum Error {
-    DimensionMismatch,
-    EmptyVector,
-}
-
 /// Calculates the mean squared error between two vectors.
-/// 
+///
 /// # Formula
-/// 
+///
 /// MSE = 1/n * sum((y - y_hat)^2)
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `y` - Vector of actual values
-/// * `y_hat` - Vector of predicted values 
+/// * `y_hat` - Vector of predicted values
 pub fn mean_squared_error(y: &Vec<f64>, y_hat: &Vec<f64>) -> Result<f64, Error> {
     if y.is_empty() && y_hat.is_empty() {
         return Err(Error::EmptyVector);
