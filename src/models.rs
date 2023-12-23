@@ -1,5 +1,3 @@
-use ndarray::Array;
-
 use super::Error;
 
 /// Linear model.
@@ -19,7 +17,7 @@ impl LinearModel {
     pub fn new() -> Self {
         LinearModel {
             intercept: 0.0,
-            coefficients: vec![],
+            coefficients: Vec::new(),
         }
     }
 
@@ -29,18 +27,23 @@ impl LinearModel {
     ///
     /// * `x` - Matrix of features
     /// * `y` - Vector of actual values
-    pub fn fit(self, x: &Array<f64, ndarray::Ix2>, y: &Vec<f64>) -> Result<Self, Error> {
+    /// 
+    /// # Requirements
+    /// 
+    /// * `x` must have the same length as `y`
+    /// * `x`'s rows must all be same length (not implemented yet!)
+    pub fn fit(self, x: &Vec<Vec<f64>>, y: &Vec<f64>) -> Result<Self, Error> {
         if x.is_empty() && y.is_empty() {
             return Err(Error::EmptyVector);
         }
 
-        match x.len_of(ndarray::Axis(0)).cmp(&y.len()) {
+        match x.len().cmp(&y.len()) {
             std::cmp::Ordering::Equal => Ok(self._fit(x, y)),
             _ => Err(Error::DimensionMismatch),
         }
     }
 
-    fn _fit(self, _x: &Array<f64, ndarray::Ix2>, _y: &Vec<f64>) -> Self {
+    fn _fit(self, _x: &Vec<Vec<f64>>, _y: &Vec<f64>) -> Self {
         // TODO: implement fit
         self
     }
@@ -50,18 +53,43 @@ impl LinearModel {
     /// # Arguments
     ///
     /// * `x` - Matrix of features
-    pub fn predict(&self, _x: &Vec<f64>) -> Result<Vec<f64>, Error> {
-        unimplemented!()
+    /// 
+    /// # Requirements
+    /// 
+    /// * `x`'s rows must all match the length of the coefficients of the `LinearModel` (not implemented yet! only checks first row for now)
+    pub fn predict(&self, x: &Vec<Vec<f64>>) -> Result<Vec<f64>, Error> {
+        if x.is_empty() {
+            return Err(Error::EmptyVector);
+        }
+
+        match x[0].len().cmp(&self.coefficients.len()) {
+            std::cmp::Ordering::Equal => Ok(self._predict(x)),
+            _ => Err(Error::DimensionMismatch),
+        }
+    }
+
+    fn _predict(&self, x: &Vec<Vec<f64>>) -> Vec<f64> {
+        x.iter()
+            .map(|row| {
+                row.iter()
+                    .zip(&self.coefficients)
+                    .map(|(a, x)| a * x)
+                    .sum::<f64>()
+                    + self.intercept
+            })
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
 
     #[test]
     fn test_fit_empty_vector() {
-        let x: Array<f64, ndarray::Ix2> = Array::zeros((0, 0));
+        let x: Vec<Vec<f64>> = vec![];
         let y: Vec<f64> = vec![];
 
         assert!(LinearModel::new().fit(&x, &y).is_err());
@@ -73,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_fit_dimension_mismatch() {
-        let x: Array<f64, ndarray::Ix2> = Array::zeros((2, 2));
+        let x: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 3.0]];
         let y: Vec<f64> = vec![0.0; 3];
 
         assert!(LinearModel::new().fit(&x, &y).is_err());
@@ -85,9 +113,22 @@ mod tests {
 
     #[test]
     fn test_fit() {
-        let x: Array<f64, ndarray::Ix2> = Array::zeros((3, 2));
+        let x: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 3.0]; 3];
         let y: Vec<f64> = vec![0.0; 3];
 
         assert!(LinearModel::new().fit(&x, &y).is_ok());
+    }
+
+    #[test]
+    fn test_predict() {
+        let mut model = LinearModel::new();
+
+        model.intercept = 1.0;
+        model.coefficients = vec![1.0];
+
+        let x: Vec<Vec<f64>> = vec![vec![1.0], vec![2.0], vec![3.0]];
+        let expected: Vec<f64> = vec![2.0, 3.0, 4.0];
+
+        assert_eq!(model.predict(&x).unwrap(), expected);
     }
 }
