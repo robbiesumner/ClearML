@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct LinearModel {
     pub intercept: f64,
-    pub coefficients: Vec<f64>,
+    pub weights: Vec<f64>,
 }
 
 impl LinearModel {
@@ -21,15 +21,11 @@ impl LinearModel {
     pub fn new() -> Self {
         LinearModel {
             intercept: 0.0,
-            coefficients: Vec::new(),
+            weights: Vec::new(),
         }
     }
 
     /// Fit linear model.
-    /// 
-    /// # Note
-    /// 
-    /// Does not fit intercept for now! # TODO
     ///
     /// # Arguments
     ///
@@ -40,9 +36,9 @@ impl LinearModel {
     ///
     /// * `x` must have the same length as `y`
     /// * `x`'s rows must all be same length
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Ok(&Self)` if successful
     /// * `Err(Error)` if unsuccessful
     pub fn fit(&mut self, x: &Vec<Vec<f64>>, y: &Vec<f64>) -> Result<&Self, Error> {
@@ -69,26 +65,26 @@ impl LinearModel {
         tol: f64,
     ) -> &Self {
         // initialize coefficients to 0
-        self.coefficients = vec![0.0; x.first().unwrap().len()];
+        self.weights = vec![0.0; x.first().unwrap().len()];
 
         for _ in 0..max_iter {
-            let y_hat = self.predict(x).unwrap();
-            let gradient = gradient_mse(&y_hat, y).unwrap();
-            // check if converged
+            let y_hat = self._predict(x);
+
+            let gradient = gradient_mse(x, &y_hat, y).unwrap();
             if gradient.iter().all(|g| g.abs() < tol) {
                 break;
             }
 
             // update coefficients
-            self.coefficients = self
-                .coefficients
+            self.weights = self
+                .weights
                 .iter()
                 .zip(&gradient)
                 .map(|(a, g)| a - learning_rate * g)
                 .collect();
 
             // update intercept
-            // TODO: how to update intercept?
+            self.intercept -= learning_rate * gradient.last().unwrap();
         }
 
         self
@@ -103,9 +99,9 @@ impl LinearModel {
     /// # Requirements
     ///
     /// * `x`'s rows must all match the length of the coefficients of the `LinearModel`
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Ok(Vec<f64>)` if successful
     /// * `Err(Error)` if unsuccessful
     pub fn predict(&self, x: &Vec<Vec<f64>>) -> Result<Vec<f64>, Error> {
@@ -113,7 +109,7 @@ impl LinearModel {
 
         // validate all rows are same length as coefficients
         x.iter()
-            .try_for_each(|row| validate_same_length(row, &self.coefficients))?;
+            .try_for_each(|row| validate_same_length(row, &self.weights))?;
 
         Ok(self._predict(x))
     }
@@ -122,7 +118,7 @@ impl LinearModel {
         x.iter()
             .map(|row| {
                 row.iter()
-                    .zip(&self.coefficients)
+                    .zip(&self.weights)
                     .map(|(x, a)| x * a)
                     .sum::<f64>()
                     + self.intercept
@@ -163,15 +159,14 @@ mod tests {
 
     #[test]
     fn test_fit() {
-        let x = vec![vec![1.0], vec![2.0]];
-        let y = vec![1.0, 2.0];
+        let x = vec![vec![1.0], vec![2.0], vec![5.0], vec![6.0]];
+        let y = vec![1.0, 2.0, 5.0, 6.0];
 
         let mut model = LinearModel::new();
 
         model.fit(&x, &y).unwrap();
 
-        println!("{:?}", model);
-        println!("{:?}", model.predict(&x).unwrap());
+        // TODO: write more descriptive tests        
     }
 
     #[test]
@@ -182,9 +177,6 @@ mod tests {
         let mut model = LinearModel::new();
 
         model.fit(&x, &y).unwrap();
-
-        println!("{:?}", model);
-        println!("{:?}", model.predict(&x).unwrap());
     }
 
     #[test]
@@ -203,7 +195,7 @@ mod tests {
         let mut model = LinearModel::new();
 
         model.intercept = 1.0;
-        model.coefficients = vec![1.0, 1.0];
+        model.weights = vec![1.0, 1.0];
 
         let x: Vec<Vec<f64>> = vec![vec![1.0, 1.0], vec![1.0]];
 
@@ -216,7 +208,7 @@ mod tests {
         let mut model = LinearModel::new();
 
         model.intercept = 1.0;
-        model.coefficients = vec![1.0];
+        model.weights = vec![1.0];
 
         let x: Vec<Vec<f64>> = vec![vec![1.0], vec![2.0], vec![3.0]];
         let expected: Vec<f64> = vec![2.0, 3.0, 4.0];
@@ -229,7 +221,7 @@ mod tests {
         let mut model = LinearModel::new();
 
         model.intercept = 1.0;
-        model.coefficients = vec![1.0, 2.0];
+        model.weights = vec![1.0, 2.0];
 
         let x: Vec<Vec<f64>> = vec![vec![1.0, 1.0], vec![2.0, 2.0], vec![3.0, 3.0]];
         let expected: Vec<f64> = vec![4.0, 7.0, 10.0];

@@ -13,9 +13,9 @@ use crate::{
 ///
 /// * `y_hat` - Vector of predicted values
 /// * `y` - Vector of actual values
-/// 
+///
 /// # Returns
-/// 
+///
 /// * Mean squared error
 pub fn mean_squared_error(y_hat: &Vec<f64>, y: &Vec<f64>) -> Result<f64, Error> {
     validate_not_empty(y_hat)?;
@@ -38,34 +38,46 @@ fn _mean_squared_error(y: &Vec<f64>, y_hat: &Vec<f64>) -> f64 {
 }
 
 /// Calculates the gradient of the mean squared error between two vectors.
-/// 
+///
 /// # Formula
-/// 
-/// d/dy_hat MSE = 2/n * (y_hat - y)
-/// 
+///
+/// dMSE/dw = 2/n * sum((y_hat - y) * x)
+///
 /// # Arguments
-/// 
+///
+/// * `x` - Vector of input values
 /// * `y_hat` - Vector of predicted values
 /// * `y` - Vector of actual values
-/// 
+///
 /// # Returns
-/// 
-/// * Vector of partial derivatives of MSE with respect to each y_hat
-pub fn gradient_mse(y_hat: &Vec<f64>, y: &Vec<f64>) -> Result<Vec<f64>, Error> {
+///
+/// * Vector of partial derivatives of MSE with respect to each weight
+/// * The last element of the vector is the partial derivative with respect to the intercept
+pub fn gradient_mse(x: &Vec<Vec<f64>>, y_hat: &Vec<f64>, y: &Vec<f64>) -> Result<Vec<f64>, Error> {
+    validate_not_empty(x)?;
     validate_not_empty(y_hat)?;
     validate_not_empty(y)?;
+    validate_same_length(x, y)?;
     validate_same_length(y_hat, y)?;
 
-    Ok(_gradient_mse(y_hat, y))
+    Ok(_gradient_mse(x, y_hat, y))
 }
 
-fn _gradient_mse(y_hat: &Vec<f64>, y: &Vec<f64>) -> Vec<f64> {
-    let n = y.len() as f64;
+fn _gradient_mse(x: &Vec<Vec<f64>>, y_hat: &Vec<f64>, y: &Vec<f64>) -> Vec<f64> {
+    let n_samples = x.len() as f64;
+    let n_features = x.first().unwrap().len();
 
-    y_hat.iter()
-        .zip(y)
-        .map(|(y_hat, y)| 2.0 / n * (y_hat - y))
-        .collect()
+    let mut gradient = vec![0.0; x.first().unwrap().len() + 1]; // + 1 for intercept
+    for (i, row) in x.iter().enumerate() {
+        for (j, x_ij) in row.iter().enumerate() {
+            gradient[j] += 2.0 / n_samples * (y_hat[i] - y[i]) * x_ij;
+        }
+    }
+
+    // intercept
+    gradient[n_features] = 2.0 / n_samples * (y_hat.iter().sum::<f64>() - y.iter().sum::<f64>());
+
+    gradient
 }
 
 #[cfg(test)]
@@ -113,13 +125,14 @@ mod tests {
     }
 
     #[test]
-    fn test_gradient_mse() {
-        let y_hat: Vec<f64> = vec![2.0, 3.0, 4.0];
-        let y: Vec<f64> = vec![1.0, 2.0, 3.0];
+    fn test_gradient_mse_slope() {
+        let x: Vec<Vec<f64>> = vec![vec![10.0]];
+        let y: Vec<f64> = vec![1.0];
+        let y_hat: Vec<f64> = vec![2.0];
 
         assert_eq!(
-            gradient_mse(&y_hat, &y).unwrap(),
-            vec![2.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0]
+            gradient_mse(&x, &y_hat, &y).unwrap()[0],
+            20.0
         );
     }
 }
