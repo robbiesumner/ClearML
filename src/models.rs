@@ -166,7 +166,7 @@ mod tests {
 
         model.fit(&x, &y).unwrap();
 
-        // TODO: write more descriptive tests        
+        // TODO: write more descriptive tests
     }
 
     #[test]

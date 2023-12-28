@@ -128,9 +128,6 @@ mod tests {
         let y: Vec<f64> = vec![1.0];
         let y_hat: Vec<f64> = vec![2.0];
 
-        assert_eq!(
-            gradient_mse(&x, &y_hat, &y).unwrap()[0],
-            20.0
-        );
+        assert_eq!(gradient_mse(&x, &y_hat, &y).unwrap()[0], 20.0);
     }
 }
