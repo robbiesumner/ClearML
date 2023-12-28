@@ -30,8 +30,6 @@ fn _mean_squared_error(y: &Vec<f64>, y_hat: &Vec<f64>) -> f64 {
         .iter()
         .zip(y)
         .map(|(y_hat, y)| (y_hat - y).powi(2))
-        .collect::<Vec<f64>>()
-        .iter()
         .sum::<f64>();
 
     sum / y.len() as f64
